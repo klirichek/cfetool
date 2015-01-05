@@ -7,12 +7,17 @@ import serial
 import sys
 import re
 
-lineregex = re.compile(r'(?:[0-9a-f]{8})(?:[:])((?: [0-9a-f]{2}){1,16})')
+lineregex = re.compile(r'(?:[0-9A-F]{8})(?:[:])((?: [0-9A-F]{2}){1,16})')
 #lineregex = re.compile(r'(?:[0-9a-f]{8})(?:[:])((?: [0-9a-f]{2}){1,16})(?:\s{4})(?:.{16})')
 
 def printf(string):
 	sys.stdout.write(string)
 	sys.stdout.flush()
+
+def sread(ser):
+	m=ser.read(1)
+#	printf(m)
+	return m
 
 def skip_prompt(ser):
 	while ser.read(1):
@@ -21,19 +26,22 @@ def skip_prompt(ser):
 def wait_prompt(ser):
 	printf("Waiting for a prompt...")
 	while True:
-		ser.write("?")
-		if(ser.read(1) == 'C' and ser.read(1) == 'F' and ser.read(1) == 'E' and ser.read(1) == '>'):
+		ser.write("\n")
+		if(sread(ser) == 'x' and sread(ser) == 'i' and sread(ser) == 'a' and sread(ser) == 'o' and sread(ser) == 'm' and sread(ser) == 'i'):
 			skip_prompt(ser)
 			printf(" OK\n")
 			return
 
 def memreadblock(ser, addr, size):
 	skip_prompt(ser)
-	ser.write("dm %x %d\r" %(addr, size))
+	ln="d -b %x %x\r" %(addr, size)
+	printf("\nExecuting '%s'"%(ln))
+	ser.write(ln)
 	buf=''
 	m = False
 	while not m:
-		m = lineregex.match(ser.readline().strip())
+		foo = ser.readline().strip()
+		m = lineregex.match(foo)
 	while m:
 		bytes = [chr(int(x, 16)) for x in m.group(1)[1:].split(' ')]
 		buf+=''.join(bytes)
